@@ -1,9 +1,13 @@
 
+
 #include "GeneticAlgorithm.h"
 #include <algorithm>
 #include <iostream>
 #include <ctime>
 #include <limits>
+#include <thread>
+
+
 
 //zwraca true jeœli first jest korzystniejszym rozwiazaniem niz second
 struct PathComparator {
@@ -24,8 +28,9 @@ GeneticAlgorithm::~GeneticAlgorithm()
 }
 
 //przeprowadzenie ca³ego algorytmu
-void GeneticAlgorithm::startAlgorithm(int population_size, int generation_count, float mutation_probability)
+void GeneticAlgorithm::startAlgorithm(int generation_count, float mutation_probability)
 {
+	int population_size = tsp.getCitiesCount()*2;
 	srand(time(NULL));
 
 	std::pair<std::vector<int>, int> first_solution, new_solution;
@@ -39,35 +44,22 @@ void GeneticAlgorithm::startAlgorithm(int population_size, int generation_count,
 	//na pocz¹tku do populacji trafiaj¹ rozwi¹zania z s¹siedztwa typu swap pierwszego losowego rozwi¹zania 
 	for (int i = 1; i < population_size; i++)
 	{
-		new_solution.first = first_solution.first;
-		swapTwoRandomCities(new_solution.first);
+		new_solution.first = generateRandomSolution();
 		new_solution.second = countCost(new_solution.first);
-		//do populacji trafiaj¹ tylko unikalne rozwi¹zania
-		if (solutionIsUnique(new_solution, population))
-		{
-			population.push_back(new_solution);
-		}
-		else
-		{
-			i--;
-		}
+
+		population.push_back(new_solution);
 		
 	}
 	PathComparator comp;
 	//rozwi¹zania s¹ sortowane od najlepszego do najgorszego
 	std::sort(population.begin(), population.end(), comp);
 
-	std::vector<std::pair<std::vector<int>, int> > next_generation;
 	//ewolucja populacji przez wyznaczon¹ iloœæ pokoleñ
 	for (int i = 0; i < generation_count; i++)
 	{
 		//kolejne pokolenie wyznaczone przez krzy¿owanie typu PMX
-		next_generation = crossoverPMX(population_size, mutation_probability);
+		crossoverPMX(population_size, mutation_probability);
 
-		//do populacji trafiaj¹ najlepsze rozwi¹zania z starej populacji i nowego pokolenia
-		population.insert(population.end(), next_generation.begin(), next_generation.end());
-		std::sort(population.begin(), population.end(), comp);
-		population.resize(population_size);
 	}
 
 	the_best_solution = population[0].first;
@@ -75,17 +67,22 @@ void GeneticAlgorithm::startAlgorithm(int population_size, int generation_count,
 }
 
 //wyznaczanie nastepnego pokolenia
-std::vector<std::pair<std::vector<int>, int> > GeneticAlgorithm::crossoverPMX(int population_size, float mutation_probability)
+void GeneticAlgorithm::crossoverPMX(int population_size, float mutation_probability)
 {
-	std::vector<std::pair<std::vector<int>, int> > next_generation;
+	PathComparator comp;
+	srand(time(NULL));
 	std::pair<std::vector<int>, int> first_parent, second_parent, first_child, second_child;
 	int first_cross_point, second_cross_point;
 	//nowe pokolenie jest niemniejsze ni¿ populacja
-	while (next_generation.size() < population_size)
+	int i = 0;
+	while (i < population_size)
 	{
+		i++;
 		//wybranie pary rozwi¹zañ metod¹ ruletki do krzy¿owania
-		first_parent = population[rand()%population.size()];
-		second_parent = population[rand() % population.size()];				
+		population_mutex.lock();
+		first_parent = population[rand() % population.size()];
+		second_parent = population[rand() % population.size()];
+		population_mutex.unlock();
 
 		//wszystkie pola w œcie¿kach potomstwa wype³niam -1, wiem, ¿e miasto nie mo¿e mieæ takiego numeru
 		first_child.first.resize(tsp.getCitiesCount(), -1);
@@ -93,11 +90,11 @@ std::vector<std::pair<std::vector<int>, int> > GeneticAlgorithm::crossoverPMX(in
 
 		//losowo s¹ wybierane punkty krzy¿owania
 		first_cross_point = rand() % tsp.getCitiesCount();
-		do
-		{
-			second_cross_point = rand() % tsp.getCitiesCount();
-		} while (first_cross_point == second_cross_point);
-		
+		// 		do
+		// 		{
+		second_cross_point = rand() % tsp.getCitiesCount();
+		// 		} while (first_cross_point == second_cross_point);
+
 
 		//first_cross_point musi byæ bli¿ej pocz¹tku vectora
 		if (first_cross_point > second_cross_point)
@@ -123,10 +120,10 @@ std::vector<std::pair<std::vector<int>, int> > GeneticAlgorithm::crossoverPMX(in
 				j = second_cross_point;
 				continue;
 			}
-				
+
 			//dodanie odpowiedniego miasta na j-tej pozycji
 			addCorrectCityAt(first_child, first_parent, j, first_cross_point, second_cross_point);
-			
+
 
 			addCorrectCityAt(second_child, second_parent, j, first_cross_point, second_cross_point);
 
@@ -143,12 +140,72 @@ std::vector<std::pair<std::vector<int>, int> > GeneticAlgorithm::crossoverPMX(in
 		//if (solutionIsUnique(first_child, next_generation) && solutionIsUnique(first_child, population)) next_generation.push_back(first_child);
 		//if (solutionIsUnique(second_child, next_generation) && solutionIsUnique(second_child, population)) next_generation.push_back(second_child);
 
-		next_generation.push_back(first_child);
-		next_generation.push_back(second_child);
+		population_mutex.lock();
+		population.push_back(first_child);
+		population.push_back(second_child);
+		population_mutex.unlock();
+
 		first_child.first.clear();
 		second_child.first.clear();
 	}
-	return next_generation;
+	population_mutex.lock();
+	std::sort(population.begin(), population.end(), comp);
+	population.resize(population_size);
+	population_mutex.unlock();
+}
+
+//przeprowadzenie ca³ego algorytmu
+void GeneticAlgorithm::startParallelAlgorithm(int generation_count, float mutation_probability)
+{
+	int population_size = tsp.getCitiesCount()*2;
+	int const threads_count = 4;
+
+	std::pair<std::vector<int>, int> first_solution, new_solution;
+	population.clear();
+
+	//pierwsze rozwi¹zanie wyznaczane jest losowo
+	first_solution.first = generateRandomSolution();
+	first_solution.second = countCost(first_solution.first);
+	population.push_back(first_solution);
+
+	//na pocz¹tku do populacji trafiaj¹ rozwi¹zania z s¹siedztwa typu swap pierwszego losowego rozwi¹zania 
+	for (int i = 1; i < population_size; i++)
+	{
+		new_solution.first = generateRandomSolution();
+		new_solution.second = countCost(new_solution.first);
+		//do populacji trafiaj¹ tylko unikalne rozwi¹zania
+
+		population.push_back(new_solution);
+	}
+	PathComparator comp;
+	//rozwi¹zania s¹ sortowane od najlepszego do najgorszego
+	std::sort(population.begin(), population.end(), comp);
+
+	//ewolucja populacji przez wyznaczon¹ iloœæ pokoleñ
+	for (int i = 0; i < generation_count; i++)
+	{
+		//kolejne pokolenie wyznaczone przez krzy¿owanie typu PMX
+
+		std::thread threads[threads_count];
+
+		for (int i = 0; i < threads_count; i++)
+		{
+			threads[i] = std::thread(&GeneticAlgorithm::crossoverPMX, this, population_size/4, mutation_probability);
+		}
+
+		for (int i = 0; i < threads_count; i++)
+		{
+			threads[i].join();
+		}
+
+		//population = next_generation;
+		//do populacji trafiaj¹ najlepsze rozwi¹zania z starej populacji i nowego pokolenia
+		//for (int i = 0; i < threads_count; i++)
+		//	population.insert(population.end(), next_generation[i].begin(), next_generation[i].end());
+	}
+
+	the_best_solution = population[0].first;
+	min_cost = population[0].second;
 }
 
 void GeneticAlgorithm::addCorrectCityAt(std::pair<std::vector<int>, int> &child, std::pair<std::vector<int>, int> const &parent, int position, int first, int second)
@@ -309,58 +366,3 @@ std::string GeneticAlgorithm::getSolutionToString(std::vector<int> path, int cos
 
 	return str;
 }
-
-void GeneticAlgorithm::startAlgorithmStepByStep(int population_size, int generation_count, float mutation_probability)
-{
-	srand(time(NULL));
-
-	std::pair<std::vector<int>, int> first_solution, new_solution;
-	population.clear();
-
-	//pierwsze rozwi¹zanie wyznaczane jest losowo
-	first_solution.first = generateRandomSolution();
-	first_solution.second = countCost(first_solution.first);
-	population.push_back(first_solution);
-
-	std::cout << "Ilosc pokolen: " << generation_count << " Rozmiar populacji: " << population_size << std::endl;
-	std::cout << "Generowanie poczatkowego pokolenia" << std::endl;
-	//na pocz¹tku do populacji trafiaj¹ rozwi¹zania z s¹siedztwa typu swap pierwszego losowego rozwi¹zania 
-	for (int i = 1; i < population_size; i++)
-	{
-		new_solution.first = first_solution.first;
-		swapTwoRandomCities(new_solution.first);
-		new_solution.second = countCost(new_solution.first);
-		//do populacji trafiaj¹ tylko unikalne rozwi¹zania
-		if (solutionIsUnique(new_solution, population))
-		{
-			population.push_back(new_solution);
-		}
-		else
-		{
-			i--;
-		}
-
-	}
-	PathComparator comp;
-	//rozwi¹zania s¹ sortowane od najlepszego do najgorszego
-	std::cout << "Sortowanie pokolenia" << std::endl;
-	std::sort(population.begin(), population.end(), comp);
-
-	std::vector<std::pair<std::vector<int>, int> > next_generation;
-	//ewolucja populacji przez wyznaczon¹ iloœæ pokoleñ
-	for (int i = 0; i < generation_count; i++)
-	{
-		std::cout << "Wyznaczanie kolejnego pokolenia" << std::endl;
-		//kolejne pokolenie wyznaczone przez krzy¿owanie typu PMX
-		next_generation = crossoverPMX(population_size, mutation_probability);
-
-		//do populacji trafiaj¹ najlepsze rozwi¹zania z starej populacji i nowego pokolenia
-		population.insert(population.end(), next_generation.begin(), next_generation.end());
-		std::sort(population.begin(), population.end(), comp);
-		population.resize(population_size);
-	}
-
-	the_best_solution = population[0].first;
-	min_cost = population[0].second;
-}
-

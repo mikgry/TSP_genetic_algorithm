@@ -26,5 +26,6 @@ public:
 	~Menu();
 	void start();
 	void startAlgorithmStepByStep();
+	void startParallelAlgorithm();
 };
 

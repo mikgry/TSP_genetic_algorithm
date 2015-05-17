@@ -35,7 +35,7 @@ void Menu::start()
 		std::cout << "2. Wprowadz macierz miast z klawiatury." << std::endl;
 		std::cout << "3. Wyswietl macierz miast." << std::endl;
 		std::cout << "4. Uruchom algorytm." << std::endl;
-		//std::cout << "5. Uruchom algorytm w trybie krok po kroku." << std::endl;
+		std::cout << "5. Uruchom algorytm w trybie rownoleglym na procesorze." << std::endl;
 		//std::cout << "6. Uruchom algorytm w trybie wykonywania pomiarów." << std::endl;
 		std::cout << "0. Zakoncz program.";
 		std::cout << std::endl << "Wybierz opcje: ";
@@ -58,10 +58,10 @@ void Menu::start()
 			case 4:
 				startAlgorithm();
 				break;
-				/*
 			case 5:
-				startAlgorithmStepByStep();
+				startParallelAlgorithm();
 				break;
+				/*
 			case 6:
 				startMeasurements();
 				break;
@@ -122,7 +122,18 @@ void Menu::startAlgorithm()
 	Clock clock; //tworzymy obiekt klasy zegar
 	double time; //tworzymy zmienna do przetrzymywania zmierzonego czasu
 	clock.startTimer(); //rozpoczynamy pomiar czasu
-	sa.startAlgorithm(100, 40, 0.4); //wywolujemy algorytm
+	sa.startAlgorithm(100, 0.4); //wywolujemy algorytm
+	clock.endTimer(); //konczymy pomiar czasu
+	time = clock.ReturnTime();
+	std::cout << std::endl << sa.getSolutionToString(sa.the_best_solution, sa.min_cost) << std::endl << "Czas: " << time << std::endl;
+}
+
+void Menu::startParallelAlgorithm()
+{
+	Clock clock; //tworzymy obiekt klasy zegar
+	double time; //tworzymy zmienna do przetrzymywania zmierzonego czasu
+	clock.startTimer(); //rozpoczynamy pomiar czasu
+	sa.startParallelAlgorithm(100, 0.4); //wywolujemy algorytm
 	clock.endTimer(); //konczymy pomiar czasu
 	time = clock.ReturnTime();
 	std::cout << std::endl << sa.getSolutionToString(sa.the_best_solution, sa.min_cost) << std::endl << "Czas: " << time << std::endl;
@@ -131,7 +142,7 @@ void Menu::startAlgorithm()
 
 void Menu::startAlgorithmStepByStep()
 {
-	sa.startAlgorithmStepByStep(2, 3, 0.1);
+	//sa.startAlgorithmStepByStep(2, 3, 0.1);
 	std::cout << std::endl << sa.getSolutionToString(sa.the_best_solution, sa.min_cost) << std::endl;
 }
 
@@ -177,7 +188,7 @@ void Menu::measureItr(){
 		for (int i = 0; i < number_of_measurements; i++)
 		{
 			clock.startTimer(); //rozpoczynamy pomiar czasu
-			sa.startAlgorithm(10, 20, 0.1); //wywolujemy algorytm
+			sa.startAlgorithm(20, 0.1); //wywolujemy algorytm
 			clock.endTimer(); //konczymy pomiar czasu
 			time = clock.ReturnTime();
 			solutions += sa.min_cost;
@@ -227,7 +238,7 @@ void Menu::measureFinalTemp(){
 		for (int i = 0; i < number_of_measurements; i++)
 		{
 			clock.startTimer(); //rozpoczynamy pomiar czasu
-			sa.startAlgorithm(10, 20, 0.1); //wywolujemy algorytm
+			sa.startAlgorithm(20, 0.1); //wywolujemy algorytm
 			clock.endTimer(); //konczymy pomiar czasu
 			time = clock.ReturnTime();
 			solutions += sa.min_cost;
@@ -279,7 +290,7 @@ void Menu::measureDelta(){
 		for (int i = 0; i < number_of_measurements; i++)
 		{
 			clock.startTimer(); //rozpoczynamy pomiar czasu
-			sa.startAlgorithm(10, 20, 0.1); //wywolujemy algorytm
+			sa.startAlgorithm(20, 0.1); //wywolujemy algorytm
 			clock.endTimer(); //konczymy pomiar czasu
 			time = clock.ReturnTime();
 			solutions += sa.min_cost;
