@@ -22,7 +22,7 @@ public:
 	GeneticAlgorithm(TravelingSalesmanProblem& tsp);
 	~GeneticAlgorithm();
 
-	void crossoverPMX(int population_size, float mutation_probability);
+	void crossoverPMX(int population_size, float mutation_probability, std::vector<std::pair<std::vector<int>, int> >& next_generation);
 
 	std::string getSolutionToString(std::vector<int> path, int cost);
 	
