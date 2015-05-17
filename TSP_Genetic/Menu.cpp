@@ -36,7 +36,8 @@ void Menu::start()
 		std::cout << "3. Wyswietl macierz miast." << std::endl;
 		std::cout << "4. Uruchom algorytm." << std::endl;
 		std::cout << "5. Uruchom algorytm w trybie rownoleglym na procesorze." << std::endl;
-		//std::cout << "6. Uruchom algorytm w trybie wykonywania pomiarów." << std::endl;
+		std::cout << "6. Uruchom algorytm w trybie wykonywania pomiarów." << std::endl;
+		std::cout << "7. Uruchom algorytm zrównoleglony w trybie wykonywania pomiarów." << std::endl;
 		std::cout << "0. Zakoncz program.";
 		std::cout << std::endl << "Wybierz opcje: ";
 
@@ -60,12 +61,14 @@ void Menu::start()
 				break;
 			case 5:
 				startParallelAlgorithm();
-				break;
-				/*
+				break;				
 			case 6:
 				startMeasurements();
 				break;
-				*/
+			case 7:
+				measureParallel();
+				break;
+				
 			case 0:
 				return;
 		}
@@ -158,155 +161,68 @@ void Menu::measureItr(){
 
 	std::cout << "rozpoczynam pomiary";
 
-	std::string matrix_file_name = "ftv55.atsp"; //ustalamy nazwe pliku wejsciowego
+	std::string matrix_file_name = "ftv44.atsp"; //ustalamy nazwe pliku wejsciowego
 
 	tsp.readCitiesDataFromFileToCitiesMatrix(matrix_file_name); //wczytujemy instancje problemu
 
 	Clock clock; //tworzymy obiekt klasy zegar
 	double time; //tworzymy zmienna do przetrzymywania zmierzonego czasu
 
-	std::string file_name = "D://wyniki_i_" + matrix_file_name + ".csv"; //ustalamy nazwe pliku wyjsciowego
+	std::string file_name = "E://wyniki_i_" + matrix_file_name + ".csv"; //ustalamy nazwe pliku wyjsciowego
 	std::fstream file;
 
 	file.open(file_name, std::ios::out);
-	file << "itr_for_one_temp" << " ; " << "avg_solution" << " ; " << "median_solution" << " ; " << "time" << std::endl; //nazywamy kolumny
+	file << "solution" << " , " << "time" << std::endl; //nazywamy kolumny
 
-	float delta = 0.9; //ustalamy parametry poczatkowe algorytmu
-	int itr_for_one_temp = 1;
-	float final_temp = 0.1;
 
-	const int number_of_measurements = 10; //ustalamy ilosc eksperymentow
+	const int number_of_measurements = 100; //ustalamy ilosc eksperymentow
 
-	long float times = 0;
-	long float solutions = 0;
-	long float solutions_array[number_of_measurements];
 
-	for (int p = 3; itr_for_one_temp <= 600; itr_for_one_temp += p){
+	for (int i = 0; i <= number_of_measurements; i++){
 
-		times = solutions = 0;
+		clock.startTimer(); //rozpoczynamy pomiar czasu
+		sa.startAlgorithm(100, 0.4); //wywolujemy algorytm
+		clock.endTimer(); //konczymy pomiar czasu
+		time = clock.ReturnTime();
 
-		for (int i = 0; i < number_of_measurements; i++)
-		{
-			clock.startTimer(); //rozpoczynamy pomiar czasu
-			sa.startAlgorithm(20, 0.1); //wywolujemy algorytm
-			clock.endTimer(); //konczymy pomiar czasu
-			time = clock.ReturnTime();
-			solutions += sa.min_cost;
-			times += time;
-			solutions_array[i] = sa.min_cost;
-		}
-		std::sort(std::begin(solutions_array), std::end(solutions_array));
-
-		file << itr_for_one_temp << " ; " << solutions / number_of_measurements << " ; " << solutions_array[number_of_measurements / 2] << " ; " << times / number_of_measurements << std::endl; //zapisujemy wyniki do pliku
-		if (itr_for_one_temp>30) itr_for_one_temp += 2;
+		file << sa.min_cost << " , " << time << std::endl; //zapisujemy wyniki do pliku
 	}
 
 	file.close();
-
-
 }
 
 
-void Menu::measureFinalTemp(){
-
-	std::string matrix_file_name = "ftv55.atsp"; //ustalamy nazwe pliku wejsciowego
-
-	tsp.readCitiesDataFromFileToCitiesMatrix(matrix_file_name); //wczytujemy instancje problemu
-
-	Clock clock; //tworzymy obiekt klasy zegar
-	double time; //tworzymy zmienna do przetrzymywania zmierzonego czasu
-
-	std::string file_name = "D://wyniki_final_temp_" + matrix_file_name + ".csv"; //ustalamy nazwe pliku wyjsciowego
-	std::fstream file;
-
-	file.open(file_name, std::ios::out);
-	file << "final_temp" << " ; " << "avg_solution" << " ; " << "median_solution" << " ; " << "time" << std::endl; //nazywamy kolumny
-
-	double delta = 0.9; //ustalamy parametry poczatkowe algorytmu
-	int itr_for_one_temp = 30;
-	float final_temp = 1500;
-
-	const int number_of_measurements = 6; //ustalamy ilosc eksperymentow
-
-	long float times = 0;
-	long float solutions = 0;
-	long float solutions_array[number_of_measurements];
-
-	for (float p = 0.85; final_temp >= 0.1; final_temp *= p){
-		times = solutions = 0;
-
-		for (int i = 0; i < number_of_measurements; i++)
-		{
-			clock.startTimer(); //rozpoczynamy pomiar czasu
-			sa.startAlgorithm(20, 0.1); //wywolujemy algorytm
-			clock.endTimer(); //konczymy pomiar czasu
-			time = clock.ReturnTime();
-			solutions += sa.min_cost;
-			times += time;
-			solutions_array[i] = sa.min_cost;
-		}
-		std::sort(std::begin(solutions_array), std::end(solutions_array));
-
-		file << final_temp << " ; " << solutions / number_of_measurements << " ; " << solutions_array[number_of_measurements / 2] << " ; " << times / number_of_measurements << std::endl; //zapisujemy wyniki do pliku
-		//if (itr_for_one_temp>30) itr_for_one_temp += 2;
-	}
-
-	file.close();
-
-
-}
-
-
-void Menu::measureDelta(){
+void Menu::measureParallel(){
 
 	std::cout << "rozpoczynam pomiary";
 
-	std::string matrix_file_name = "ftv55.atsp"; //ustalamy nazwe pliku wejsciowego
+	std::string matrix_file_name = "br17.atsp"; //ustalamy nazwe pliku wejsciowego
 
 	tsp.readCitiesDataFromFileToCitiesMatrix(matrix_file_name); //wczytujemy instancje problemu
 
 	Clock clock; //tworzymy obiekt klasy zegar
 	double time; //tworzymy zmienna do przetrzymywania zmierzonego czasu
 
-	std::string file_name = "D://wyniki_delta_" + matrix_file_name + ".csv"; //ustalamy nazwe pliku wyjsciowego
+	std::string file_name = "E://wyniki_i_" + matrix_file_name + ".cpu.csv"; //ustalamy nazwe pliku wyjsciowego
 	std::fstream file;
 
 	file.open(file_name, std::ios::out);
-	file << "delta" << " ; " << "avg_solution" << " ; " << "median_solution" << " ; " << "time" << std::endl; //nazywamy kolumny
+	file << "solution" << " , " << "time" << std::endl; //nazywamy kolumny
 
-	double delta = 0.9999; //ustalamy parametry poczatkowe algorytmu
-	int itr_for_one_temp = 60;
-	float final_temp = 0.1;
 
-	const int number_of_measurements = 5; //ustalamy ilosc eksperymentow
+	const int number_of_measurements = 100; //ustalamy ilosc eksperymentow
 
-	long float times = 0;
-	long float solutions = 0;
-	long float solutions_array[number_of_measurements];
 
-	for (float p = 0.95; delta >= 0.4; ){
-		times = solutions = 0;
+	for (int i = 0; i <= number_of_measurements; i++){
 
-		for (int i = 0; i < number_of_measurements; i++)
-		{
-			clock.startTimer(); //rozpoczynamy pomiar czasu
-			sa.startAlgorithm(20, 0.1); //wywolujemy algorytm
-			clock.endTimer(); //konczymy pomiar czasu
-			time = clock.ReturnTime();
-			solutions += sa.min_cost;
-			times += time;
-			solutions_array[i] = sa.min_cost;
-		}
-		std::sort(std::begin(solutions_array), std::end(solutions_array));
+		clock.startTimer(); //rozpoczynamy pomiar czasu
+		sa.startParallelAlgorithm(100, 0.4); //wywolujemy algorytm
+		clock.endTimer(); //konczymy pomiar czasu
+		time = clock.ReturnTime();
 
-		file << delta << " ; " << solutions / number_of_measurements << " ; " << solutions_array[number_of_measurements / 2] << " ; " << times / number_of_measurements << std::endl; //zapisujemy wyniki do pliku
-		//if (itr_for_one_temp>30) itr_for_one_temp += 2;
-
-		if (delta < 0.99)delta *= p;
-		else delta *= 0.995;
+		file << sa.min_cost << " , " << time << std::endl; //zapisujemy wyniki do pliku
 	}
 
 	file.close();
-
 
 }

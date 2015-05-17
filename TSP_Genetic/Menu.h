@@ -16,9 +16,7 @@ private:
 	//void startAlgorithmStepByStep();
 	void startMeasurements();
 	void measureItr();
-	void measureDelta();
-	void measureFinalTemp();
-	void measureSize();
+	void measureParallel();
 	
 public:
 	
