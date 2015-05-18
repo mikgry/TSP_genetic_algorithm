@@ -6,6 +6,7 @@
 #include <ctime>
 #include <limits>
 #include <thread>
+#include <random>
 
 
 
@@ -31,7 +32,6 @@ GeneticAlgorithm::~GeneticAlgorithm()
 void GeneticAlgorithm::startAlgorithm(int generation_count, float mutation_probability)
 {
 	int population_size = tsp.getCitiesCount()*2;
-	srand(time(NULL));
 
 	std::pair<std::vector<int>, int> first_solution, new_solution;
 	population.clear();
@@ -75,7 +75,10 @@ void GeneticAlgorithm::startAlgorithm(int generation_count, float mutation_proba
 //wyznaczanie nastepnego pokolenia
 void GeneticAlgorithm::crossoverPMX(int population_size, float mutation_probability, std::vector<std::pair<std::vector<int>, int> >& next_generation)
 {
-	srand(time(NULL));
+	std::random_device rd;
+	std::mt19937 mt(rd());
+	std::uniform_int_distribution<int> dist(0, population_size-1);
+
 	next_generation.clear();
 	std::pair<std::vector<int>, int> first_parent, second_parent, first_child, second_child;
 	int first_cross_point, second_cross_point;
@@ -83,18 +86,18 @@ void GeneticAlgorithm::crossoverPMX(int population_size, float mutation_probabil
 	while (next_generation.size() < population_size)
 	{
 		//wybranie pary rozwi¹zañ metod¹ ruletki do krzy¿owania
-		first_parent = population[rand() % population.size()];
-		second_parent = population[rand() % population.size()];
+		first_parent = population[dist(mt) % population.size()];
+		second_parent = population[dist(mt) % population.size()];
 
 		//wszystkie pola w œcie¿kach potomstwa wype³niam -1, wiem, ¿e miasto nie mo¿e mieæ takiego numeru
 		first_child.first.resize(tsp.getCitiesCount(), -1);
 		second_child.first.resize(tsp.getCitiesCount(), -1);
 
 		//losowo s¹ wybierane punkty krzy¿owania
-		first_cross_point = rand() % tsp.getCitiesCount();
+		first_cross_point = dist(mt) % tsp.getCitiesCount();
 		// 		do
 		// 		{
-		second_cross_point = rand() % tsp.getCitiesCount();
+		second_cross_point = dist(mt) % tsp.getCitiesCount();
 		// 		} while (first_cross_point == second_cross_point);
 
 
@@ -238,75 +241,20 @@ void GeneticAlgorithm::addCorrectCityAt(std::pair<std::vector<int>, int> &child,
 //mutacja rozwi¹zania
 void GeneticAlgorithm::mutate(std::pair<std::vector<int>, int>& speciman, float probability)
 {
+	std::random_device rd;
+	std::mt19937 mt(rd());
+	std::uniform_real_distribution<double> dist(0, 100);
+	std::uniform_int_distribution<int> swap_dist(0, population.size() / 4);
 	//jeœli zostanie wylosowane prawdopodobieñstwo mniejsze od podanego, nastêpuje mutacja
-	if ((float)rand() / RAND_MAX < probability)
+	if (dist(mt)/100.0 / RAND_MAX < probability)
 	{
 		//wylosowana zostaje iloœæ ruchów swap w mutacji, maksymalnie wielkoœæ_populacji/4
-		int swap_number = rand() % population.size()/4;
+		int swap_number = swap_dist(mt);
 		for (int i = 0; i <= swap_number; i++)
 		{
 			swapTwoRandomCities(speciman.first);
 		}
 	}
-}
-
-//metoda zwraca indeks osobnika w populacji, zgodnie z zasad¹ ruletki, lepsze rozwi¹zania s¹ czêœciej zwracane
-int GeneticAlgorithm::rouletteWheelSelection()
-{
-	//liczê sumê wszystkich kosztów wyznaczonych œcie¿ek
-	int costs_sum = 0;
-	for each (std::pair<std::vector<int>, int> specimen in population)
-	{
-		costs_sum += specimen.second;
-	}
-
-	int rand_result = rand() % costs_sum;
-
-	int chosen_spiecman = -1;
-
-	while (rand_result >= 0)
-	{
-		chosen_spiecman++;
-		rand_result -= population[population.size() - chosen_spiecman-1].second;
-	}
-	return chosen_spiecman;
-}
-
-//sprawdzenie czy dane rozwi¹zanie jest unikalne
-bool GeneticAlgorithm::solutionIsUnique(std::pair<std::vector<int>, int> new_solution, std::vector<std::pair<std::vector<int>, int> > population)
-{
-	for each (std::pair<std::vector<int>, int> solution in population)
-	{
-		//jeœli koszty s¹ ró¿ne, wiadomo, ze rozwi¹zania s¹ ró¿ne
-		if (new_solution.second == solution.second)
-		{
-			//wyznaczenie wspólnego pocz¹tku permutacji
-			int common_begin = 0;
-			while (new_solution.first[0] != solution.first[common_begin])
-			{
-				common_begin++;
-			}
-			int index = 0;
-			int equal_cities = 0;
-			for (int i = 0; i < new_solution.first.size(); i++)
-			{
-				index = (common_begin + i) % new_solution.first.size();
-				//zliczanie wspólnych miast w œcie¿ce
-				if (new_solution.first[i] == solution.first[index])
-				{
-					equal_cities++;
-				}
-				else
-					break;
-			}
-			//jeœli wszystkie miasta s¹ takie same, to rozwi¹zanie nie jest unikalne
-			if (equal_cities == new_solution.first.size())
-			{
-				return false;
-			}
-		}
-	}
-	return true;
 }
 
 //zwraca losow¹ permutacje miast
@@ -337,11 +285,15 @@ int GeneticAlgorithm::countCost(std::vector<int> path)
 //zamienia miejscami dwa losowe miasta
 void GeneticAlgorithm::swapTwoRandomCities(std::vector<int>& path)
 {
-	int firstPosition = rand() % path.size();
+	std::random_device rd;
+	std::mt19937 mt(rd());
+	std::uniform_int_distribution<int> dist(0, path.size()-1);
+
+	int firstPosition = dist(mt);
 
 	int secondPosition;
 	do {
-		secondPosition = rand() % path.size();
+		secondPosition = dist(mt);
 	} while (firstPosition == secondPosition);
 
 	int buffor = path.at(firstPosition);
